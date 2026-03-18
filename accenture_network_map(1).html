@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accenture Leadership Cross-Engagement Network</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=Space+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e8;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 28px 14px;
+    background: linear-gradient(180deg, rgba(10,10,15,0.97) 0%, rgba(10,10,15,0.85) 70%, transparent 100%);
+    pointer-events: none;
+  }
+
+  #header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a855f7;
+    margin-bottom: 4px;
+  }
+
+  #header p {
+    font-size: 12px;
+    color: #777;
+    font-weight: 300;
+  }
+
+  #legend {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 100;
+    background: rgba(18,18,28,0.92);
+    border: 1px solid rgba(168,85,247,0.15);
+    border-radius: 10px;
+    padding: 14px 18px;
+    backdrop-filter: blur(12px);
+    min-width: 220px;
+  }
+
+  #legend h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #666;
+    margin-bottom: 10px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 7px;
+    font-size: 12px;
+    color: #aaa;
+  }
+
+  .legend-circle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-line {
+    width: 28px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  #tooltip {
+    position: fixed;
+    z-index: 200;
+    background: rgba(18,18,28,0.96);
+    border: 1px solid rgba(168,85,247,0.3);
+    border-radius: 10px;
+    padding: 14px 18px;
+    backdrop-filter: blur(16px);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  #tooltip .tt-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    margin-bottom: 2px;
+  }
+
+  #tooltip .tt-role {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  #tooltip .tt-stat {
+    font-size: 11px;
+    color: #bbb;
+    margin-bottom: 2px;
+  }
+
+  #tooltip .tt-stat span {
+    font-family: 'Space Mono', monospace;
+    color: #a855f7;
+    font-weight: 700;
+  }
+
+  #tooltip .tt-connections {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  #tooltip .tt-conn-item {
+    font-size: 10px;
+    color: #999;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  #tooltip .tt-conn-arrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+  }
+
+  #stats {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 12px;
+  }
+
+  .stat-card {
+    background: rgba(18,18,28,0.92);
+    border: 1px solid rgba(168,85,247,0.12);
+    border-radius: 8px;
+    padding: 10px 14px;
+    backdrop-filter: blur(12px);
+    text-align: center;
+  }
+
+  .stat-card .stat-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #a855f7;
+    line-height: 1;
+  }
+
+  .stat-card .stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  svg { cursor: grab; }
+  svg:active { cursor: grabbing; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Accenture Leadership Cross-Engagement Network</h1>
+  <p>LinkedIn comment relationships between Accenture C-suite and identified senior contacts</p>
+</div>
+
+<div id="stats">
+  <div class="stat-card"><div class="stat-val">6</div><div class="stat-label">Leaders</div></div>
+  <div class="stat-card"><div class="stat-val">36</div><div class="stat-label">Contacts</div></div>
+  <div class="stat-card"><div class="stat-val">3</div><div class="stat-label">Bidirectional</div></div>
+  <div class="stat-card"><div class="stat-val">45</div><div class="stat-label">Links</div></div>
+</div>
+
+<div id="legend">
+  <h3>Nodes</h3>
+  <div class="legend-item"><div class="legend-circle" style="background:#a855f7;box-shadow:0 0 8px rgba(168,85,247,0.5)"></div> Accenture Leader</div>
+  <div class="legend-item"><div class="legend-circle" style="background:#06b6d4"></div> Senior Contact</div>
+  <h3 style="margin-top:12px">Edges</h3>
+  <div class="legend-item"><div class="legend-line" style="background:linear-gradient(90deg,#22c55e,#4ade80)"></div> Bidirectional</div>
+  <div class="legend-item"><div class="legend-line" style="background:linear-gradient(90deg,#60a5fa,#93c5fd)"></div> Leader → Contact</div>
+  <div class="legend-item"><div class="legend-line" style="background:linear-gradient(90deg,#f97316,#fb923c)"></div> Contact → Leader</div>
+  <h3 style="margin-top:12px">Interaction</h3>
+  <div class="legend-item" style="font-size:11px;color:#666">Drag nodes · Scroll to zoom · Click to highlight</div>
+</div>
+
+<div id="tooltip"></div>
+
+<svg id="network"></svg>
+
+<script>
+const DATA = {"nodes":[{"id":"Julie Sweet","type":"leader","role":"Chair & CEO, Accenture","interactions":6},{"id":"Manish Sharma","type":"leader","role":"Chief Strategy & Services Officer","interactions":14},{"id":"Mauro Macchi","type":"leader","role":"CEO EMEA, Accenture","interactions":33},{"id":"Mercedes Oblanca Rojo","type":"leader","role":"CEO Spain & Portugal, Accenture","interactions":16},{"id":"Andy Rowlands","type":"leader","role":"Comms Director EMEA, Accenture","interactions":1},{"id":"Simon Collister PhD","type":"leader","role":"Director, Human Understanding Lab","interactions":0},{"id":"Accenture España","type":"name","role":"","interactions":2},{"id":"Nicole van Det","type":"name","role":"","interactions":1},{"id":"Nina Raphael","type":"name","role":"MD (Partner), Accenture UK | FS Global Client Executive","interactions":3},{"id":"Tim Good","type":"name","role":"Senior MD – EMEA Talent & Organisation Lead, Accenture","interactions":4},{"id":"Koen Deryckere","type":"name","role":"President, Accenture France/Belgium/Luxembourg | Global Mgmt Committee","interactions":14},{"id":"Fabio Bonfanti","type":"name","role":"","interactions":1},{"id":"Accenture","type":"name","role":"","interactions":1},{"id":"Varun Kumar","type":"name","role":"Associate Director @ Marsh McLennan | Ex Accenture","interactions":2},{"id":"Eloi Decottignies","type":"name","role":"Senior MD, Strategic Accounts at Accenture | Reinvention & Partnerships","interactions":6},{"id":"Walevska P.","type":"name","role":"Director, Global Ecosystem Partnerships, Accenture LearnVantage","interactions":2},{"id":"Javier Fervienza","type":"name","role":"Digital Technology & Commercial Executive | Forbes Council","interactions":2},{"id":"Eric Cadena","type":"name","role":"Data & AI @ Meta (via Accenture) | Ivy League Instructor","interactions":1},{"id":"Hilary O'Meara","type":"name","role":"Country MD Accenture Ireland | EMEA Resources Industry Lead","interactions":4},{"id":"Chris B.","type":"name","role":"Associate Director, Sales, Strategy & Growth at Accenture UK","interactions":1},{"id":"Paul Young","type":"name","role":"CPA | Business Advisory","interactions":1},{"id":"Jefferson Wang","type":"name","role":"Chief Strategy Officer of Cloud First | Senior MD at Accenture","interactions":1},{"id":"Florian Keppler","type":"name","role":"MD at Accenture | Growth & Transformation Strategy","interactions":1},{"id":"Esther Gasull Farre","type":"name","role":"MD | Head of Accenture Strategy, Spain & Portugal","interactions":1},{"id":"Mónica Velasco","type":"name","role":"MD, Accenture. Financial Services Spain","interactions":1},{"id":"Nuria Zurrón Prieto","type":"name","role":"Accenture - AWS BG - Business Development & MKT","interactions":1},{"id":"Diego Soler","type":"name","role":"Strategy, Clients, Markets | CCO | CEO | Big Deals","interactions":3},{"id":"Karen O'Regan","type":"name","role":"Accenture Ireland MD | Head of Strategy","interactions":1},{"id":"Julio Juan Prieto","type":"name","role":"Board Member | Senior Advisor | Aerospace & Defence","interactions":2},{"id":"Cristina Ayllón Benito","type":"name","role":"Business Operations Director at Accenture","interactions":1},{"id":"Domingo Mirón","type":"name","role":"Senior Executive | CEO UAX | Board Member","interactions":1},{"id":"Naomi Begum-Inglis","type":"name","role":"Global Sales Officer at Accenture","interactions":2},{"id":"Kristof Lambert","type":"name","role":"CEO & Country MD Accenture BeLux","interactions":1},{"id":"Andrea Falciai","type":"name","role":"Managing Director at Accenture","interactions":1},{"id":"Fabio Corna Pellegrini","type":"name","role":"MD | ExCom Accenture Belgium & Luxembourg","interactions":1},{"id":"Louise Preedy","type":"name","role":"Insights: Chemicals, Natural Resources, Oil & Gas, Utilities","interactions":1},{"id":"Aurelien Bouriot","type":"name","role":"CCO – TP French-Speaking Markets | Former Accenture","interactions":1},{"id":"Eduardo Ordax","type":"name","role":"Generative AI Lead @ AWS | Startup Advisor","interactions":1},{"id":"Neha Arora","type":"name","role":"Leading India's 1st Regional S&T Cluster","interactions":1},{"id":"Gary Wachowicz","type":"name","role":"AI Transformation & Enterprise Systems Executive","interactions":1},{"id":"Sachin Kumar","type":"name","role":"Pursuing Doctorate in AI & ML | Golden Gate University","interactions":1},{"id":"Sumit Sahai","type":"name","role":"Associate Director, Accenture Operations","interactions":1}],"links":[{"source":"Mercedes Oblanca Rojo","target":"Accenture España","leader_to_name":2,"name_to_leader":0,"total":2,"type":"leader_to_name"},{"source":"Mauro Macchi","target":"Nicole van Det","leader_to_name":1,"name_to_leader":0,"total":1,"type":"leader_to_name"},{"source":"Mauro Macchi","target":"Nina Raphael","leader_to_name":2,"name_to_leader":1,"total":3,"type":"bidirectional"},{"source":"Mauro Macchi","target":"Tim Good","leader_to_name":2,"name_to_leader":2,"total":4,"type":"bidirectional"},{"source":"Mauro Macchi","target":"Koen Deryckere","leader_to_name":4,"name_to_leader":7,"total":11,"type":"bidirectional"},{"source":"Mauro Macchi","target":"Fabio Bonfanti","leader_to_name":1,"name_to_leader":0,"total":1,"type":"leader_to_name"},{"source":"Manish Sharma","target":"Accenture","leader_to_name":1,"name_to_leader":0,"total":1,"type":"leader_to_name"},{"source":"Manish Sharma","target":"Varun Kumar","leader_to_name":0,"name_to_leader":2,"total":2,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Eloi Decottignies","leader_to_name":0,"name_to_leader":4,"total":4,"type":"name_to_leader"},{"source":"Julie Sweet","target":"Eloi Decottignies","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Walevska P.","leader_to_name":0,"name_to_leader":2,"total":2,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Javier Fervienza","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Julie Sweet","target":"Eric Cadena","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Julie Sweet","target":"Hilary O'Meara","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Andy Rowlands","target":"Chris B.","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Paul Young","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Jefferson Wang","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Florian Keppler","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Esther Gasull Farre","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Mónica Velasco","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Nuria Zurrón Prieto","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Diego Soler","leader_to_name":0,"name_to_leader":2,"total":2,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Hilary O'Meara","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Karen O'Regan","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Eloi Decottignies","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Julio Juan Prieto","leader_to_name":0,"name_to_leader":2,"total":2,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Cristina Ayllón Benito","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Domingo Mirón","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Julie Sweet","target":"Koen Deryckere","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Naomi Begum-Inglis","leader_to_name":0,"name_to_leader":2,"total":2,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Kristof Lambert","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Andrea Falciai","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Fabio Corna Pellegrini","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Louise Preedy","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Aurelien Bouriot","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mauro Macchi","target":"Diego Soler","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Eduardo Ordax","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Mercedes Oblanca Rojo","target":"Hilary O'Meara","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Javier Fervienza","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Julie Sweet","target":"Neha Arora","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Gary Wachowicz","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Hilary O'Meara","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Julie Sweet","target":"Sachin Kumar","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Koen Deryckere","leader_to_name":0,"name_to_leader":2,"total":2,"type":"name_to_leader"},{"source":"Manish Sharma","target":"Sumit Sahai","leader_to_name":0,"name_to_leader":1,"total":1,"type":"name_to_leader"}]};
+
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+const svg = d3.select('#network')
+  .attr('width', width)
+  .attr('height', height);
+
+// Background glow
+const defs = svg.append('defs');
+
+// Glow filter for leader nodes
+const glowFilter = defs.append('filter').attr('id', 'glow');
+glowFilter.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'blur');
+glowFilter.append('feMerge').selectAll('feMergeNode')
+  .data(['blur', 'SourceGraphic']).enter()
+  .append('feMergeNode').attr('in', d => d);
+
+// Strong glow for bidirectional
+const glowStrong = defs.append('filter').attr('id', 'glowStrong');
+glowStrong.append('feGaussianBlur').attr('stdDeviation', '6').attr('result', 'blur');
+glowStrong.append('feMerge').selectAll('feMergeNode')
+  .data(['blur', 'SourceGraphic']).enter()
+  .append('feMergeNode').attr('in', d => d);
+
+// Arrow markers
+const markerTypes = [
+  { id: 'arrow-bidir', color: '#22c55e' },
+  { id: 'arrow-l2n', color: '#60a5fa' },
+  { id: 'arrow-n2l', color: '#f97316' },
+];
+
+markerTypes.forEach(m => {
+  defs.append('marker')
+    .attr('id', m.id)
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-4L10,0L0,4')
+    .attr('fill', m.color)
+    .attr('opacity', 0.7);
+});
+
+const g = svg.append('g');
+
+// Zoom
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 4])
+  .on('zoom', e => g.attr('transform', e.transform));
+svg.call(zoom);
+
+// Edge color
+function edgeColor(d) {
+  if (d.type === 'bidirectional') return '#22c55e';
+  if (d.type === 'leader_to_name') return '#60a5fa';
+  return '#f97316';
+}
+
+function edgeMarker(d) {
+  if (d.type === 'bidirectional') return 'url(#arrow-bidir)';
+  if (d.type === 'leader_to_name') return 'url(#arrow-l2n)';
+  return 'url(#arrow-n2l)';
+}
+
+// Node sizing
+const leaderRadius = 22;
+function nameRadius(d) {
+  return Math.max(6, Math.min(16, 4 + d.interactions * 0.9));
+}
+
+// Force simulation
+const simulation = d3.forceSimulation(DATA.nodes)
+  .force('link', d3.forceLink(DATA.links).id(d => d.id).distance(d => {
+    if (d.type === 'bidirectional') return 120;
+    return 160;
+  }).strength(d => {
+    return 0.3 + d.total * 0.05;
+  }))
+  .force('charge', d3.forceManyBody().strength(d => d.type === 'leader' ? -600 : -200))
+  .force('center', d3.forceCenter(width / 2, height / 2))
+  .force('collision', d3.forceCollide().radius(d => d.type === 'leader' ? 50 : 25))
+  .force('x', d3.forceX(width / 2).strength(0.03))
+  .force('y', d3.forceY(height / 2).strength(0.03));
+
+// Draw edges
+const link = g.append('g')
+  .selectAll('line')
+  .data(DATA.links)
+  .enter().append('line')
+  .attr('stroke', edgeColor)
+  .attr('stroke-width', d => Math.max(1.5, d.total * 0.8))
+  .attr('stroke-opacity', d => d.type === 'bidirectional' ? 0.6 : 0.25)
+  .attr('marker-end', edgeMarker);
+
+// Edge interaction counts
+const edgeLabels = g.append('g')
+  .selectAll('text')
+  .data(DATA.links.filter(d => d.total > 1))
+  .enter().append('text')
+  .text(d => d.total)
+  .attr('font-family', "'Space Mono', monospace")
+  .attr('font-size', 9)
+  .attr('fill', d => edgeColor(d))
+  .attr('fill-opacity', 0.6)
+  .attr('text-anchor', 'middle')
+  .attr('dy', -5);
+
+// Draw nodes
+const node = g.append('g')
+  .selectAll('g')
+  .data(DATA.nodes)
+  .enter().append('g')
+  .style('cursor', 'pointer')
+  .call(d3.drag()
+    .on('start', dragStarted)
+    .on('drag', dragged)
+    .on('end', dragEnded));
+
+// Leader rings
+node.filter(d => d.type === 'leader')
+  .append('circle')
+  .attr('r', leaderRadius + 4)
+  .attr('fill', 'none')
+  .attr('stroke', '#a855f7')
+  .attr('stroke-width', 1.5)
+  .attr('stroke-opacity', 0.3)
+  .attr('stroke-dasharray', '4,3');
+
+// Node circles
+node.append('circle')
+  .attr('r', d => d.type === 'leader' ? leaderRadius : nameRadius(d))
+  .attr('fill', d => d.type === 'leader' ? '#a855f7' : '#06b6d4')
+  .attr('fill-opacity', d => d.type === 'leader' ? 0.9 : 0.7)
+  .attr('stroke', d => d.type === 'leader' ? '#c084fc' : '#22d3ee')
+  .attr('stroke-width', d => d.type === 'leader' ? 2 : 1)
+  .attr('filter', d => d.type === 'leader' ? 'url(#glow)' : null);
+
+// Highlight bidirectional nodes
+node.filter(d => {
+  return DATA.links.some(l =>
+    l.type === 'bidirectional' &&
+    ((typeof l.source === 'string' ? l.source : l.source.id) === d.id ||
+     (typeof l.target === 'string' ? l.target : l.target.id) === d.id)
+  ) && d.type === 'name';
+}).select('circle')
+  .attr('stroke', '#22c55e')
+  .attr('stroke-width', 2.5)
+  .attr('filter', 'url(#glowStrong)');
+
+// Labels
+node.append('text')
+  .text(d => {
+    if (d.type === 'leader') {
+      return d.id.split(' ')[0];
+    }
+    const parts = d.id.split(' ');
+    if (parts.length > 2) return parts[0] + ' ' + parts[1];
+    return d.id;
+  })
+  .attr('font-family', d => d.type === 'leader' ? "'Space Mono', monospace" : "'DM Sans', sans-serif")
+  .attr('font-size', d => d.type === 'leader' ? 11 : 10)
+  .attr('font-weight', d => d.type === 'leader' ? 700 : 500)
+  .attr('fill', d => d.type === 'leader' ? '#e9d5ff' : '#b0bec5')
+  .attr('text-anchor', 'middle')
+  .attr('dy', d => (d.type === 'leader' ? leaderRadius : nameRadius(d)) + 14);
+
+// Leader subtitle
+node.filter(d => d.type === 'leader')
+  .append('text')
+  .text(d => d.role.length > 30 ? d.role.slice(0, 28) + '…' : d.role)
+  .attr('font-family', "'DM Sans', sans-serif")
+  .attr('font-size', 8)
+  .attr('font-weight', 300)
+  .attr('fill', '#666')
+  .attr('text-anchor', 'middle')
+  .attr('dy', leaderRadius + 25);
+
+// Tooltip
+const tooltip = d3.select('#tooltip');
+
+node.on('mouseenter', (event, d) => {
+  const connections = DATA.links.filter(l => {
+    const s = typeof l.source === 'string' ? l.source : l.source.id;
+    const t = typeof l.target === 'string' ? l.target : l.target.id;
+    return s === d.id || t === d.id;
+  });
+
+  let html = `<div class="tt-name">${d.id}</div>`;
+  html += `<div class="tt-role">${d.role || d.type === 'leader' ? d.role : 'Contact'}</div>`;
+  html += `<div class="tt-stat">Total interactions: <span>${d.interactions}</span></div>`;
+  html += `<div class="tt-stat">Connections: <span>${connections.length}</span></div>`;
+
+  if (connections.length > 0) {
+    html += '<div class="tt-connections">';
+    connections.forEach(c => {
+      const s = typeof c.source === 'string' ? c.source : c.source.id;
+      const t = typeof c.target === 'string' ? c.target : c.target.id;
+      const other = s === d.id ? t : s;
+      let arrow, detail;
+      if (c.type === 'bidirectional') {
+        arrow = '⇄'; detail = `${c.leader_to_name}↓ ${c.name_to_leader}↑`;
+      } else if (c.type === 'leader_to_name') {
+        arrow = '→'; detail = `${c.total} comment${c.total > 1 ? 's' : ''}`;
+      } else {
+        arrow = '←'; detail = `${c.total} comment${c.total > 1 ? 's' : ''}`;
+      }
+      html += `<div class="tt-conn-item"><span class="tt-conn-arrow">${arrow}</span> ${other} (${detail})</div>`;
+    });
+    html += '</div>';
+  }
+
+  tooltip.html(html).style('opacity', 1);
+
+  // Highlight connected
+  const connectedIds = new Set([d.id]);
+  connections.forEach(c => {
+    connectedIds.add(typeof c.source === 'string' ? c.source : c.source.id);
+    connectedIds.add(typeof c.target === 'string' ? c.target : c.target.id);
+  });
+
+  node.style('opacity', n => connectedIds.has(n.id) ? 1 : 0.15);
+  link.style('opacity', l => {
+    const s = typeof l.source === 'string' ? l.source : l.source.id;
+    const t = typeof l.target === 'string' ? l.target : l.target.id;
+    return (s === d.id || t === d.id) ? 0.8 : 0.04;
+  });
+})
+.on('mousemove', event => {
+  tooltip
+    .style('left', (event.clientX + 16) + 'px')
+    .style('top', (event.clientY - 10) + 'px');
+})
+.on('mouseleave', () => {
+  tooltip.style('opacity', 0);
+  node.style('opacity', 1);
+  link.style('opacity', d => d.type === 'bidirectional' ? 0.6 : 0.25);
+});
+
+// Tick
+simulation.on('tick', () => {
+  link
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
+
+  edgeLabels
+    .attr('x', d => (d.source.x + d.target.x) / 2)
+    .attr('y', d => (d.source.y + d.target.y) / 2);
+
+  node.attr('transform', d => `translate(${d.x},${d.y})`);
+});
+
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragged(event, d) {
+  d.fx = event.x; d.fy = event.y;
+}
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+// Initial zoom to fit
+setTimeout(() => {
+  svg.transition().duration(800).call(
+    zoom.transform,
+    d3.zoomIdentity.translate(width * 0.05, height * 0.05).scale(0.9)
+  );
+}, 500);
+</script>
+</body>
+</html>
